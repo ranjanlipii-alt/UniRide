@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniRide - MITWPU</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { outfit: ['Outfit'], dm: ['DM Sans'] }
+    }
+  }
+}
+</script>
+  <style>
+html, body { height: 100%; margin: 0; }
+* { box-sizing: border-box; }
+
+.app-root { height: 100%; width: 100%; overflow: auto; }
+
+/* Animated gradient bg */
+.login-bg {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f766e 100%);
+  position: relative;
+  overflow: hidden;
+}
+.login-bg::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle at 30% 70%, rgba(20,184,166,0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 30%, rgba(56,189,248,0.1) 0%, transparent 50%);
+  animation: floatBg 20s ease-in-out infinite;
+}
+@keyframes floatBg { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-3%,2%)} }
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Tab indicator */
+.tab-active { color: #14b8a6; border-bottom: 3px solid #14b8a6; }
+.tab-inactive { color: #94a3b8; border-bottom: 3px solid transparent; }
+
+/* Ride card */
+.ride-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  transition: transform 0.2s, border-color 0.3s;
+}
+.ride-card:hover { transform: translateY(-2px); border-color: #14b8a6; }
+
+/* Gender badge */
+.badge-male { background: #1e3a5f; color: #38bdf8; }
+.badge-female { background: #4a1942; color: #e879f9; }
+.badge-any { background: #334155; color: #94a3b8; }
+
+/* Stagger animation */
+.fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 0.5s forwards; }
+@keyframes fadeUp { to { opacity:1; transform:translateY(0) } }
+
+/* Toast */
+.toast-msg {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #14b8a6; color: #0f172a; padding: 12px 24px; border-radius: 12px;
+  font-weight: 600; z-index: 999; animation: toastIn 0.3s forwards;
+  font-family: 'DM Sans', sans-serif;
+}
+@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+/* Select styling */
+select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+
+/* Inline confirm */
+.confirm-overlay {
+  position: absolute; inset: 0; background: rgba(15,23,42,0.92);
+  border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px; z-index: 10;
+}
+
+.loading-spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="app-root font-outfit" style="background:#0f172a; color:#e2e8f0;">
+   <!-- LOGIN SCREEN -->
+   <div id="screen-login" class="login-bg h-full w-full flex items-center justify-center p-4" style="position:relative; z-index:1;">
+    <div class="glass-card rounded-3xl p-8 w-full max-w-md fade-up" style="animation-delay:0.1s;">
+     <!-- Logo -->
+     <div class="flex flex-col items-center mb-8">
+      <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#14b8a6,#0d9488);">
+       <svg width="40" height="40" viewbox="0 0 40 40" fill="none"><path d="M8 28c0-2 2-4 6-4h12c4 0 6 2 6 4" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" /><circle cx="20" cy="14" r="6" stroke="#0f172a" stroke-width="2.5" /><path d="M12 32h16" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" /><path d="M6 20l4-8h20l4 8" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+       </svg>
+      </div>
+      <h1 id="login-title" class="text-3xl font-bold text-white">UniRide</h1>
+      <p id="login-tagline" class="text-sm mt-1" style="color:#5eead4;">MITWPU Student Ride Sharing</p>
+     </div><!-- Login Form -->
+     <form id="login-form" class="space-y-4">
+      <div>
+       <label for="login-name" class="block text-sm font-medium mb-1" style="color:#94a3b8;">Full Name</label> <input id="login-name" type="text" required placeholder="Your name" class="w-full px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-teal-500" style="background:#1e293b; border:1px solid #334155;">
+      </div>
+      <div>
+       <label for="login-email" class="block text-sm font-medium mb-1" style="color:#94a3b8;">College Email</label> <input id="login-email" type="email" required placeholder="name@mitwpu.edu.in" class="w-full px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-teal-500" style="background:#1e293b; border:1px solid #334155;">
+      </div>
+      <div>
+       <label for="login-gender" class="block text-sm font-medium mb-1" style="color:#94a3b8;">Gender</label> <select id="login-gender" required class="w-full px-4 py-3 rounded-xl text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#1e293b; border:1px solid #334155;"> <option value="">Select gender</option> <option value="Male">Male</option> <option value="Female">Female</option> <option value="Other">Other</option> </select>
+      </div>
+      <div>
+       <label for="login-phone" class="block text-sm font-medium mb-1" style="color:#94a3b8;">Phone Number</label> <input id="login-phone" type="tel" required placeholder="10-digit mobile" class="w-full px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-teal-500" style="background:#1e293b; border:1px solid #334155;">
+      </div>
+      <p id="login-error" class="text-red-400 text-sm hidden"></p><button type="submit" class="w-full py-3 rounded-xl font-semibold text-lg transition-all hover:scale-[1.02]" style="background:linear-gradient(135deg,#14b8a6,#0d9488); color:#0f172a;"> Sign In with College Email </button>
+      <p class="text-center text-xs" style="color:#64748b;">Only @mitwpu.edu.in emails accepted</p>
+     </form>
+    </div>
+   </div><!-- MAIN APP (hidden initially) -->
+   <div id="screen-app" class="h-full w-full flex flex-col" style="display:none;">
+    <!-- Top Bar -->
+    <header class="flex items-center justify-between px-5 py-4" style="background:#1e293b; border-bottom:1px solid #334155;">
+     <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#14b8a6,#0d9488);">
+       <svg width="20" height="20" viewbox="0 0 40 40" fill="none"><path d="M6 20l4-8h20l4 8" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><path d="M8 28c0-2 2-4 6-4h12c4 0 6 2 6 4" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+       </svg>
+      </div><span id="header-title" class="font-bold text-lg text-white">UniRide</span>
+     </div>
+     <div class="flex items-center gap-2">
+      <button id="btn-profile" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Profile"> <i data-lucide="user-circle" style="width:20px;height:20px;color:#94a3b8;"></i> </button> <button id="btn-logout" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Sign Out"> <i data-lucide="log-out" style="width:18px;height:18px;color:#94a3b8;"></i> </button>
+     </div>
+    </header><!-- Navigation Tabs -->
+    <nav class="flex" style="background:#1e293b;">
+     <button class="nav-tab tab-active flex-1 py-3 text-sm font-semibold text-center transition" data-tab="find"> <i data-lucide="search" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:4px;"></i> Find Ride </button> <button class="nav-tab tab-inactive flex-1 py-3 text-sm font-semibold text-center transition" data-tab="offer"> <i data-lucide="plus-circle" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:4px;"></i> Offer Ride </button> <button class="nav-tab tab-inactive flex-1 py-3 text-sm font-semibold text-center transition" data-tab="my"> <i data-lucide="car" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:4px;"></i> My Rides </button> <button class="nav-tab tab-inactive flex-1 py-3 text-sm font-semibold text-center transition" data-tab="profile"> <i data-lucide="user" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:4px;"></i> Profile </button>
+    </nav><!-- Content Area -->
+    <div id="content-area" class="flex-1 overflow-auto p-4 space-y-4" style="background:#0f172a;">
+     <!-- FIND RIDES TAB -->
+     <div id="tab-find" class="tab-content">
+      <!-- Filters -->
+      <div class="rounded-2xl p-4 mb-4 space-y-3" style="background:#1e293b; border:1px solid #334155;">
+       <div class="flex items-center gap-2 mb-1">
+        <i data-lucide="filter" style="width:16px;height:16px;color:#14b8a6;"></i> <span class="font-semibold text-sm" style="color:#14b8a6;">Filter Rides</span>
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div>
+         <label for="filter-from" class="text-xs font-medium" style="color:#64748b;">From</label> <select id="filter-from" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="">Any location</option> <option value="MITWPU Campus">MITWPU Campus</option> <option value="Kothrud">Kothrud</option> <option value="Pune Station">Pune Station</option> <option value="Shivaji Nagar">Shivaji Nagar</option> <option value="Camp">Camp</option> <option value="Lohegaon">Lohegaon</option> <option value="Baner">Baner</option> <option value="Hinjawadi">Hinjawadi</option> <option value="Bavdhan">Bavdhan</option> <option value="Pashan">Pashan</option> <option value="Vishrantwadi">Vishrantwadi</option> <option value="Sinhagad Road">Sinhagad Road</option> <option value="Katraj">Katraj</option> <option value="Kondhwa">Kondhwa</option> <option value="Nariman Point">Nariman Point</option> <option value="University of Pune">University of Pune</option> <option value="Wakad">Wakad</option> <option value="Kalyani Nagar">Kalyani Nagar</option> <option value="Navi Pune">Navi Pune</option> </select>
+        </div>
+        <div>
+         <label for="filter-to" class="text-xs font-medium" style="color:#64748b;">To</label> <select id="filter-to" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="">Any location</option> <option value="MITWPU Campus">MITWPU Campus</option> <option value="Kothrud">Kothrud</option> <option value="Pune Station">Pune Station</option> <option value="Shivaji Nagar">Shivaji Nagar</option> <option value="Camp">Camp</option> <option value="Lohegaon">Lohegaon</option> <option value="Baner">Baner</option> <option value="Hinjawadi">Hinjawadi</option> <option value="Bavdhan">Bavdhan</option> <option value="Pashan">Pashan</option> <option value="Vishrantwadi">Vishrantwadi</option> <option value="Sinhagad Road">Sinhagad Road</option> <option value="Katraj">Katraj</option> <option value="Kondhwa">Kondhwa</option> <option value="Nariman Point">Nariman Point</option> <option value="University of Pune">University of Pune</option> <option value="Wakad">Wakad</option> <option value="Kalyani Nagar">Kalyani Nagar</option> <option value="Navi Pune">Navi Pune</option> </select>
+        </div>
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div>
+         <label for="filter-date" class="text-xs font-medium" style="color:#64748b;">Date</label> <input id="filter-date" type="date" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+        </div>
+        <div>
+         <label for="filter-gender" class="text-xs font-medium" style="color:#64748b;">Gender Pref</label> <select id="filter-gender" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="">Any</option> <option value="Male">Male only</option> <option value="Female">Female only</option> </select>
+        </div>
+       </div>
+      </div><!-- Ride List -->
+      <div id="rides-list" class="space-y-3"></div>
+      <div id="no-rides" class="text-center py-16 hidden">
+       <i data-lucide="map-pin" style="width:48px;height:48px;color:#334155;margin:0 auto 12px;display:block;"></i>
+       <p class="text-lg font-semibold" style="color:#475569;">No rides available</p>
+       <p class="text-sm" style="color:#64748b;">Be the first to offer a ride!</p>
+      </div>
+     </div><!-- OFFER RIDE TAB -->
+     <div id="tab-offer" class="tab-content" style="display:none;">
+      <div class="rounded-2xl p-5 space-y-4" style="background:#1e293b; border:1px solid #334155;">
+       <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="plus-circle" style="width:22px;height:22px;color:#14b8a6;"></i> Offer a Ride</h2>
+       <form id="offer-form" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+         <div>
+          <label for="offer-from" class="text-xs font-medium" style="color:#64748b;">Pickup Location *</label> <select id="offer-from" required class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="">Select pickup location</option> <option value="MITWPU Campus">MITWPU Campus</option> <option value="Kothrud">Kothrud</option> <option value="Pune Station">Pune Station</option> <option value="Shivaji Nagar">Shivaji Nagar</option> <option value="Camp">Camp</option> <option value="Lohegaon">Lohegaon</option> <option value="Baner">Baner</option> <option value="Hinjawadi">Hinjawadi</option> <option value="Bavdhan">Bavdhan</option> <option value="Pashan">Pashan</option> <option value="Vishrantwadi">Vishrantwadi</option> <option value="Sinhagad Road">Sinhagad Road</option> <option value="Katraj">Katraj</option> <option value="Kondhwa">Kondhwa</option> <option value="Nariman Point">Nariman Point</option> <option value="University of Pune">University of Pune</option> <option value="Wakad">Wakad</option> <option value="Kalyani Nagar">Kalyani Nagar</option> <option value="Navi Pune">Navi Pune</option> </select>
+         </div>
+         <div>
+          <label for="offer-to" class="text-xs font-medium" style="color:#64748b;">Drop Location *</label> <select id="offer-to" required class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="">Select drop location</option> <option value="MITWPU Campus">MITWPU Campus</option> <option value="Kothrud">Kothrud</option> <option value="Pune Station">Pune Station</option> <option value="Shivaji Nagar">Shivaji Nagar</option> <option value="Camp">Camp</option> <option value="Lohegaon">Lohegaon</option> <option value="Baner">Baner</option> <option value="Hinjawadi">Hinjawadi</option> <option value="Bavdhan">Bavdhan</option> <option value="Pashan">Pashan</option> <option value="Vishrantwadi">Vishrantwadi</option> <option value="Sinhagad Road">Sinhagad Road</option> <option value="Katraj">Katraj</option> <option value="Kondhwa">Kondhwa</option> <option value="Nariman Point">Nariman Point</option> <option value="University of Pune">University of Pune</option> <option value="Wakad">Wakad</option> <option value="Kalyani Nagar">Kalyani Nagar</option> <option value="Navi Pune">Navi Pune</option> </select>
+         </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+         <div>
+          <label for="offer-date" class="text-xs font-medium" style="color:#64748b;">Date *</label> <input id="offer-date" type="date" required class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+         </div>
+         <div>
+          <label for="offer-time" class="text-xs font-medium" style="color:#64748b;">Time *</label> <input id="offer-time" type="time" required class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+         </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+         <div>
+          <label for="offer-seats" class="text-xs font-medium" style="color:#64748b;">Seats *</label> <select id="offer-seats" required class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option> </select>
+         </div>
+         <div>
+          <label for="offer-price" class="text-xs font-medium" style="color:#64748b;">₹ Per Seat *</label> <input id="offer-price" type="number" required min="0" placeholder="50" class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+         </div>
+         <div>
+          <label for="offer-vehicle" class="text-xs font-medium" style="color:#64748b;">Vehicle</label> <select id="offer-vehicle" class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option>Car</option><option>Bike</option><option>Auto</option> </select>
+         </div>
+        </div>
+        <div>
+         <label for="offer-genderpref" class="text-xs font-medium" style="color:#64748b;">Gender Preference</label> <select id="offer-genderpref" class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;"> <option value="Any">Any gender welcome</option> <option value="Male">Male riders only</option> <option value="Female">Female riders only</option> </select>
+        </div>
+        <div>
+         <label for="offer-notes" class="text-xs font-medium" style="color:#64748b;">Additional Notes</label> <input id="offer-notes" placeholder="e.g. AC car, music okay, no smoking" class="w-full mt-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+        </div>
+        <p id="offer-error" class="text-red-400 text-sm hidden"></p><button id="offer-submit" type="submit" class="w-full py-3 rounded-xl font-semibold transition-all hover:scale-[1.02]" style="background:linear-gradient(135deg,#14b8a6,#0d9488); color:#0f172a;"> Publish Ride </button>
+       </form>
+      </div><!-- Cost Splitter -->
+      <div class="rounded-2xl p-5 mt-4 space-y-3" style="background:#1e293b; border:1px solid #334155;">
+       <h3 class="font-bold flex items-center gap-2"><i data-lucide="calculator" style="width:18px;height:18px;color:#14b8a6;"></i> Cost Splitter</h3>
+       <p class="text-xs" style="color:#64748b;">Quick calculate how much each rider pays</p>
+       <div class="grid grid-cols-2 gap-3">
+        <div>
+         <label for="split-total" class="text-xs" style="color:#64748b;">Total Trip Cost (₹)</label> <input id="split-total" type="number" min="0" placeholder="200" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white placeholder-slate-500 outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+        </div>
+        <div>
+         <label for="split-people" class="text-xs" style="color:#64748b;">Number of People</label> <input id="split-people" type="number" min="1" max="10" value="2" class="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white placeholder-slate-500 outline-none focus:ring-1 focus:ring-teal-500" style="background:#0f172a; border:1px solid #334155;">
+        </div>
+       </div>
+       <div id="split-result" class="text-center py-3 rounded-xl font-bold text-xl" style="background:#14b8a615; color:#5eead4;">
+        ₹ 0 per person
+       </div>
+      </div>
+     </div><!-- MY RIDES TAB -->
+     <div id="tab-my" class="tab-content" style="display:none;">
+      <div id="my-rides-list" class="space-y-3"></div>
+      <div id="no-my-rides" class="text-center py-16 hidden">
+       <i data-lucide="car" style="width:48px;height:48px;color:#334155;margin:0 auto 12px;display:block;"></i>
+       <p class="text-lg font-semibold" style="color:#475569;">No rides offered yet</p>
+       <p class="text-sm" style="color:#64748b;">Head to "Offer Ride" to create one!</p>
+      </div>
+     </div><!-- PROFILE TAB -->
+     <div id="tab-profile" class="tab-content" style="display:none;">
+      <div class="rounded-2xl p-5 space-y-4" style="background:#1e293b; border:1px solid #334155;">
+       <!-- Profile Header -->
+       <div class="flex items-center gap-4 pb-4" style="border-bottom:1px solid #334155;">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold" style="background:linear-gradient(135deg,#14b8a6,#0d9488); color:#0f172a;" id="profile-avatar">
+         ?
+        </div>
+        <div>
+         <h2 id="profile-name" class="text-2xl font-bold text-white">—</h2>
+         <p id="profile-email" class="text-sm" style="color:#94a3b8;">—</p>
+        </div>
+       </div><!-- Info Grid -->
+       <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-xl p-3" style="background:#0f172a; border:1px solid #334155;">
+         <p class="text-xs" style="color:#64748b;">Gender</p>
+         <p id="profile-gender" class="font-semibold text-white mt-1">—</p>
+        </div>
+        <div class="rounded-xl p-3" style="background:#0f172a; border:1px solid #334155;">
+         <p class="text-xs" style="color:#64748b;">Phone</p>
+         <p id="profile-phone" class="font-semibold text-white mt-1">—</p>
+        </div>
+       </div><!-- Stats -->
+       <div class="rounded-xl p-4" style="background:linear-gradient(135deg,#14b8a615,#0d948815); border:1px solid #14b8a640;">
+        <p class="text-xs" style="color:#64748b;">Ride Statistics</p>
+        <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+         <div>
+          <p class="text-xl font-bold" style="color:#5eead4;" id="stat-offered">0</p>
+          <p class="text-xs" style="color:#94a3b8;">Offered</p>
+         </div>
+         <div>
+          <p class="text-xl font-bold" style="color:#5eead4;" id="stat-total-seats">0</p>
+          <p class="text-xs" style="color:#94a3b8;">Total Seats</p>
+         </div>
+         <div>
+          <p class="text-xl font-bold" style="color:#5eead4;" id="stat-avg-price">₹0</p>
+          <p class="text-xs" style="color:#94a3b8;">Avg Price</p>
+         </div>
+        </div>
+       </div><!-- Rating (Optional) -->
+       <div class="rounded-xl p-4 flex items-center justify-between" style="background:#0f172a; border:1px solid #334155;">
+        <div>
+         <p class="text-sm font-semibold text-white">Rating</p>
+         <p class="text-xs mt-1" style="color:#64748b;">Coming soon</p>
+        </div>
+        <div class="text-3xl">
+         ⭐
+        </div>
+       </div><!-- Safety Tips -->
+       <div class="rounded-xl p-4" style="background:#4a1942; border:1px solid #7c2d63;">
+        <div class="flex items-center gap-2 mb-2"><i data-lucide="shield-check" style="width:18px;height:18px;color:#e879f9;"></i>
+         <p class="font-semibold text-white text-sm">Safety Tips</p>
+        </div>
+        <ul class="text-xs space-y-1" style="color:#e9d5ff;">
+         <li>✓ Share your live location with trusted contacts</li>
+         <li>✓ Inform someone about your ride details</li>
+         <li>✓ Trust your instincts—cancel if uncomfortable</li>
+         <li>✓ Use verified college email only</li>
+        </ul>
+       </div><!-- Logout Button --> <button id="profile-logout" class="w-full py-3 rounded-xl font-semibold transition-all hover:scale-[1.02]" style="background:#ef4444; color:#fff;">Sign Out from Profile</button>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+// ── State ──
+let currentUser = null;
+let allRides = [];
+
+// ── Storage (works everywhere) ──
+function loadRides() {
+  try {
+    const saved = localStorage.getItem('uniride_rides');
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return window.__uniride_rides || [];
+  }
+}
+
+function saveRides(rides) {
+  try {
+    localStorage.setItem('uniride_rides', JSON.stringify(rides));
+  } catch (e) {
+    window.__uniride_rides = rides;
+  }
+}
+
+// ── Init ──
+function initApp() {
+  allRides = loadRides();
+}
+
+initApp();
+
+// ── Login ──
+document.getElementById('login-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const name = document.getElementById('login-name').value.trim();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const gender = document.getElementById('login-gender').value;
+  const phone = document.getElementById('login-phone').value.trim();
+  const err = document.getElementById('login-error');
+
+  if (!email.endsWith('@mitwpu.edu.in')) {
+    err.textContent = 'Please use your @mitwpu.edu.in college email';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    err.textContent = 'Enter a valid 10-digit phone number';
+    err.classList.remove('hidden');
+    return;
+  }
+  err.classList.add('hidden');
+  currentUser = { name, email, gender, phone };
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-app').style.display = 'flex';
+  lucide.createIcons();
+  renderRides();
+  renderMyRides();
+});
+
+// ── Logout ──
+document.getElementById('btn-logout').addEventListener('click', function() {
+  currentUser = null;
+  document.getElementById('screen-app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-form').reset();
+});
+
+// ── Profile Button ──
+document.getElementById('btn-profile').addEventListener('click', function() {
+  document.querySelectorAll('.nav-tab').forEach(b => { b.classList.remove('tab-active'); b.classList.add('tab-inactive'); });
+  document.querySelector('[data-tab="profile"]').classList.remove('tab-inactive');
+  document.querySelector('[data-tab="profile"]').classList.add('tab-active');
+  document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+  document.getElementById('tab-profile').style.display = 'block';
+  updateProfile();
+});
+
+// ── Profile Logout ──
+document.getElementById('profile-logout').addEventListener('click', function() {
+  currentUser = null;
+  document.getElementById('screen-app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-form').reset();
+});
+
+// ── Tab Navigation ──
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.nav-tab').forEach(b => { b.classList.remove('tab-active'); b.classList.add('tab-inactive'); });
+    this.classList.remove('tab-inactive');
+    this.classList.add('tab-active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+    document.getElementById('tab-' + this.dataset.tab).style.display = 'block';
+  });
+});
+
+// ── Offer Ride ──
+document.getElementById('offer-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+  const errEl = document.getElementById('offer-error');
+  const btn = document.getElementById('offer-submit');
+
+  if (allRides.length >= 999) {
+    errEl.textContent = 'Maximum ride limit reached (999). Please delete old rides.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Publishing...';
+
+  const newRide = {
+    __backendId: `ride_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    type: 'ride',
+    driver_name: currentUser.name,
+    driver_gender: currentUser.gender,
+    phone: currentUser.phone,
+    from_location: document.getElementById('offer-from').value.trim(),
+    to_location: document.getElementById('offer-to').value.trim(),
+    date: document.getElementById('offer-date').value,
+    time: document.getElementById('offer-time').value,
+    seats: parseInt(document.getElementById('offer-seats').value),
+    price: parseInt(document.getElementById('offer-price').value) || 0,
+    vehicle: document.getElementById('offer-vehicle').value,
+    gender_pref: document.getElementById('offer-genderpref').value,
+    notes: document.getElementById('offer-notes').value.trim()
+  };
+
+  allRides.push(newRide);
+  saveRides(allRides);
+  
+  btn.disabled = false;
+  btn.textContent = 'Publish Ride';
+  
+  this.reset();
+  errEl.classList.add('hidden');
+  showToast('Ride published successfully! 🚗');
+  renderRides();
+  renderMyRides();
+});
+
+// ── Cost Splitter ──
+['split-total', 'split-people'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    const total = parseFloat(document.getElementById('split-total').value) || 0;
+    const people = parseInt(document.getElementById('split-people').value) || 1;
+    document.getElementById('split-result').textContent = `₹ ${Math.ceil(total / people)} per person`;
+  });
+});
+
+// ── Filter listeners ──
+['filter-date', 'filter-gender'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderRides);
+  document.getElementById(id).addEventListener('change', renderRides);
+});
+['filter-from', 'filter-to'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderRides);
+});
+
+// ── Render Rides ──
+function renderRides() {
+  const container = document.getElementById('rides-list');
+  const noRides = document.getElementById('no-rides');
+  const ff = document.getElementById('filter-from').value.trim().toLowerCase();
+  const ft = document.getElementById('filter-to').value.trim().toLowerCase();
+  const fd = document.getElementById('filter-date').value;
+  const fg = document.getElementById('filter-gender').value;
+
+  let filtered = allRides.filter(r => {
+    if (ff && !(r.from_location || '').toLowerCase().includes(ff)) return false;
+    if (ft && !(r.to_location || '').toLowerCase().includes(ft)) return false;
+    if (fd && r.date !== fd) return false;
+    if (fg && r.gender_pref !== 'Any' && r.gender_pref !== fg) return false;
+    return true;
+  });
+
+  // Sort newest first
+  filtered.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+
+  const existingMap = new Map([...container.children].map(el => [el.dataset.rid, el]));
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    noRides.classList.remove('hidden');
+    return;
+  }
+  noRides.classList.add('hidden');
+
+  const newIds = new Set(filtered.map(r => r.__backendId));
+  existingMap.forEach((el, id) => { if (!newIds.has(id)) el.remove(); });
+
+  filtered.forEach((ride, i) => {
+    const id = ride.__backendId;
+    let el = container.querySelector(`[data-rid="${id}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.rid = id;
+      el.className = 'ride-card p-4 fade-up';
+      el.style.animationDelay = `${i * 0.05}s`;
+      container.appendChild(el);
+    }
+    updateRideCard(el, ride, false);
+  });
+}
+
+function updateRideCard(el, r, isMine) {
+  const gClass = r.driver_gender === 'Female' ? 'badge-female' : r.driver_gender === 'Male' ? 'badge-male' : 'badge-any';
+  const prefClass = r.gender_pref === 'Female' ? 'badge-female' : r.gender_pref === 'Male' ? 'badge-male' : 'badge-any';
+  const vehicleIcon = r.vehicle === 'Bike' ? '🏍️' : r.vehicle === 'Auto' ? '🛺' : '🚗';
+  const dateStr = r.date ? new Date(r.date + 'T00:00').toLocaleDateString('en-IN', { day:'numeric', month:'short' }) : '';
+  const timeStr = r.time || '';
+  const isOwner = currentUser && r.driver_name === currentUser.name && r.phone === currentUser.phone;
+
+  el.innerHTML = `
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:#14b8a630; color:#5eead4;">
+          ${(r.driver_name || '?')[0].toUpperCase()}
+        </div>
+        <div>
+          <p class="font-semibold text-white text-sm">${r.driver_name || 'Unknown'}</p>
+          <span class="text-xs px-2 py-0.5 rounded-full ${gClass}">${r.driver_gender || '?'}</span>
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="font-bold text-lg" style="color:#5eead4;">₹${r.price || 0}</p>
+        <p class="text-xs" style="color:#64748b;">per seat</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 mb-2 text-sm">
+      <span style="color:#14b8a6;">●</span>
+      <span class="font-medium">${r.from_location || '?'}</span>
+      <span style="color:#475569;">→</span>
+      <span style="color:#14b8a6;">●</span>
+      <span class="font-medium">${r.to_location || '?'}</span>
+    </div>
+    <div class="flex flex-wrap gap-2 text-xs mb-2" style="color:#94a3b8;">
+      <span class="flex items-center gap-1">${vehicleIcon} ${r.vehicle || 'Car'}</span>
+      <span>•</span>
+      <span>${dateStr} ${timeStr}</span>
+      <span>•</span>
+      <span>${r.seats || 0} seat${(r.seats||0)>1?'s':''}</span>
+      <span>•</span>
+      <span class="px-2 py-0.5 rounded-full ${prefClass}">${r.gender_pref === 'Any' ? 'All welcome' : r.gender_pref + ' only'}</span>
+    </div>
+    ${r.notes ? `<p class="text-xs italic mb-2" style="color:#64748b;">"${r.notes}"</p>` : ''}
+    <div class="flex gap-2 mt-2">
+      ${!isOwner ? `<a href="tel:${r.phone || ''}" class="flex-1 py-2 rounded-xl text-center text-sm font-semibold transition hover:opacity-90" style="background:#14b8a6; color:#0f172a;">
+        📞 Contact
+      </a>` : ''}
+      ${isMine ? `<button onclick="confirmDelete(this, '${r.__backendId}')" class="flex-1 py-2 rounded-xl text-center text-sm font-semibold transition hover:opacity-90" style="background:#ef4444; color:#fff;">Delete</button>` : ''}
+    </div>
+  `;
+}
+
+// ── My Rides ──
+function renderMyRides() {
+  if (!currentUser) return;
+  const container = document.getElementById('my-rides-list');
+  const noEl = document.getElementById('no-my-rides');
+  const mine = allRides.filter(r => r.driver_name === currentUser.name && r.phone === currentUser.phone);
+
+  const existingMap = new Map([...container.children].map(el => [el.dataset.rid, el]));
+  if (mine.length === 0) { container.innerHTML = ''; noEl.classList.remove('hidden'); return; }
+  noEl.classList.add('hidden');
+
+  const newIds = new Set(mine.map(r => r.__backendId));
+  existingMap.forEach((el, id) => { if (!newIds.has(id)) el.remove(); });
+
+  mine.forEach((ride, i) => {
+    const id = ride.__backendId;
+    let el = container.querySelector(`[data-rid="${id}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.rid = id;
+      el.className = 'ride-card p-4 fade-up';
+      el.style.position = 'relative';
+      el.style.animationDelay = `${i * 0.05}s`;
+      container.appendChild(el);
+    }
+    updateRideCard(el, ride, true);
+  });
+}
+
+// ── Update Profile ──
+function updateProfile() {
+  if (!currentUser) return;
+  
+  document.getElementById('profile-avatar').textContent = currentUser.name[0].toUpperCase();
+  document.getElementById('profile-name').textContent = currentUser.name;
+  document.getElementById('profile-email').textContent = currentUser.email;
+  document.getElementById('profile-gender').textContent = currentUser.gender;
+  document.getElementById('profile-phone').textContent = currentUser.phone;
+  
+  const myRides = allRides.filter(r => r.driver_name === currentUser.name && r.phone === currentUser.phone);
+  document.getElementById('stat-offered').textContent = myRides.length;
+  document.getElementById('stat-total-seats').textContent = myRides.reduce((sum, r) => sum + (r.seats || 0), 0);
+  
+  if (myRides.length > 0) {
+    const avgPrice = Math.round(myRides.reduce((sum, r) => sum + (r.price || 0), 0) / myRides.length);
+    document.getElementById('stat-avg-price').textContent = '₹' + avgPrice;
+  } else {
+    document.getElementById('stat-avg-price').textContent = '₹0';
+  }
+}
+
+// ── Delete with inline confirm ──
+window.confirmDelete = function(btn, backendId) {
+  const card = btn.closest('.ride-card');
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-overlay';
+  overlay.innerHTML = `
+    <p class="text-white font-semibold">Delete this ride?</p>
+    <div class="flex gap-3">
+      <button class="confirm-yes px-5 py-2 rounded-xl font-semibold" style="background:#ef4444; color:#fff;">Yes, Delete</button>
+      <button class="confirm-no px-5 py-2 rounded-xl font-semibold" style="background:#334155; color:#e2e8f0;">Cancel</button>
+    </div>
+  `;
+  card.style.position = 'relative';
+  card.appendChild(overlay);
+
+  overlay.querySelector('.confirm-no').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.confirm-yes').addEventListener('click', async () => {
+    const ride = allRides.find(r => r.__backendId === backendId);
+    if (!ride) { overlay.remove(); return; }
+    overlay.querySelector('.confirm-yes').innerHTML = '<span class="loading-spinner"></span>';
+    allRides = allRides.filter(r => r.__backendId !== backendId);
+    saveRides(allRides);
+    showToast('Ride deleted');
+    renderRides();
+    renderMyRides();
+    overlay.remove();
+  });
+};
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast-msg';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// Init app and icons
+renderRides();
+renderMyRides();
+lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9eb48dc367ac1c71',t:'MTc3NjAyMTI2NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
